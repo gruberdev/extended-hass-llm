@@ -1,5 +1,5 @@
 {
-  "domain": "extended-hass-llm",
+  "domain": "extended_hass_llm",
   "name": "Extended OpenAI Conversation",
   "codeowners": [
     "@gruberdev"

@@ -1,5 +1,5 @@
 {
-  "name": "extended-hass-llm",
+  "name": "extended_hass_llm",
   "render_readme": true,
   "homeassistant": "2024.10"
 }

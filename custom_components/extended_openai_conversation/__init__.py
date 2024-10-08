@@ -14,7 +14,7 @@ from openai.types.chat.chat_completion import (
 )
 import yaml
 from zep_cloud.client import AsyncZep
-from zep_cloud.types import Message
+from zep_cloud import Message
 
 
 from homeassistant.components import conversation

@@ -12,6 +12,12 @@ DEFAULT_SKIP_AUTHENTICATION = False
 EVENT_AUTOMATION_REGISTERED = "automation_registered_via_extended_hass_llm"
 EVENT_CONVERSATION_FINISHED = "extended_hass_llm.conversation.finished"
 
+CONF_ZEP_API_KEY = "zep_api_key"
+CONF_USE_ZEP_MEMORY = "use_zep_memory"
+DEFAULT_USE_ZEP_MEMORY = True
+CONF_ZEP_SESSION_TTL = "zep_session_ttl"
+DEFAULT_ZEP_SESSION_TTL = 86400  # 24 hours in seconds
+
 CONF_PROMPT = "prompt"
 DEFAULT_PROMPT = """I want you to act as smart home manager of Home Assistant.
 I will provide information of smart home along with a question, you will truthfully make correction or answer using information provided in one sentence in everyday language.

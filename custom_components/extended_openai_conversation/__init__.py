@@ -13,6 +13,9 @@ from openai.types.chat.chat_completion import (
     Choice,
 )
 import yaml
+from zep_cloud.client import AsyncZep
+from zep_cloud.types import Message
+
 
 from homeassistant.components import conversation
 from homeassistant.components.homeassistant.exposed_entities import async_should_expose
@@ -63,6 +66,11 @@ from .const import (
     DEFAULT_USE_TOOLS,
     DOMAIN,
     EVENT_CONVERSATION_FINISHED,
+    CONF_ZEP_API_KEY,
+    CONF_USE_ZEP_MEMORY,
+    DEFAULT_USE_ZEP_MEMORY,
+    CONF_ZEP_SESSION_TTL,
+    DEFAULT_ZEP_SESSION_TTL,
 )
 from .exceptions import (
     FunctionLoadFailed,
@@ -152,6 +160,12 @@ class OpenAIAgent(conversation.AbstractConversationAgent):
                 base_url=base_url,
                 organization=entry.data.get(CONF_ORGANIZATION),
             )
+        self.use_zep_memory = self.entry.options.get(CONF_USE_ZEP_MEMORY, DEFAULT_USE_ZEP_MEMORY)
+        if self.use_zep_memory:
+            self.zep_client = AsyncZep(api_key=self.entry.options[CONF_ZEP_API_KEY])
+            self.zep_session_ttl = self.entry.options.get(CONF_ZEP_SESSION_TTL, DEFAULT_ZEP_SESSION_TTL)
+        else:
+            self.zep_client = None
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:
@@ -163,7 +177,10 @@ class OpenAIAgent(conversation.AbstractConversationAgent):
     ) -> conversation.ConversationResult:
         exposed_entities = self.get_exposed_entities()
 
-        if user_input.conversation_id in self.history:
+        if self.use_zep_memory:
+            session_id = self.get_or_create_session_id()
+            messages = await self.get_zep_memory(session_id)
+        elif user_input.conversation_id in self.history:
             conversation_id = user_input.conversation_id
             messages = self.history[conversation_id]
         else:
@@ -216,7 +233,10 @@ class OpenAIAgent(conversation.AbstractConversationAgent):
             )
 
         messages.append(query_response.message.model_dump(exclude_none=True))
-        self.history[conversation_id] = messages
+        if self.use_zep_memory:
+            await self.update_zep_memory(session_id, messages[-2:])  # Add user message and assistant response
+        else:
+            self.history[conversation_id] = messages
 
         self.hass.bus.async_fire(
             EVENT_CONVERSATION_FINISHED,
@@ -441,6 +461,45 @@ class OpenAIAgent(conversation.AbstractConversationAgent):
             }
         )
         return await self.query(user_input, messages, exposed_entities, n_requests)
+
+    def get_or_create_session_id(self):
+        """Get or create a new session ID for Zep Cloud."""
+        now = datetime.now()
+        today = now.date()
+        if not hasattr(self, '_zep_session') or self._zep_session['date'] != today:
+            self._zep_session = {
+                'id': uuid.uuid4().hex,
+                'date': today
+            }
+        return self._zep_session['id']
+
+    async def get_zep_memory(self, session_id):
+        """Retrieve memory from Zep Cloud."""
+        try:
+            memory = await self.zep_client.memory.get(session_id)
+            return [
+                {
+                    "role": msg.role,
+                    "content": msg.content
+                } for msg in memory.messages
+            ]
+        except Exception as e:
+            _LOGGER.error(f"Error retrieving memory from Zep Cloud: {e}")
+            return []
+
+    async def update_zep_memory(self, session_id, new_messages):
+        """Update memory in Zep Cloud."""
+        try:
+            zep_messages = [
+                Message(
+                    role=msg["role"],
+                    role_type="user" if msg["role"] == "user" else "assistant",
+                    content=msg["content"]
+                ) for msg in new_messages
+            ]
+            await self.zep_client.memory.add(session_id, messages=zep_messages)
+        except Exception as e:
+            _LOGGER.error(f"Error updating memory in Zep Cloud: {e}")
 
     async def execute_tool_calls(
         self,

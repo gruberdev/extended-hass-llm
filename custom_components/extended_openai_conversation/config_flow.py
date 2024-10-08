@@ -57,6 +57,11 @@ from .const import (
     DEFAULT_TOP_P,
     DEFAULT_USE_TOOLS,
     DOMAIN,
+    CONF_ZEP_API_KEY,
+    CONF_USE_ZEP_MEMORY,
+    DEFAULT_USE_ZEP_MEMORY,
+    CONF_ZEP_SESSION_TTL,
+    DEFAULT_ZEP_SESSION_TTL,
 )
 from .helpers import validate_authentication
 
@@ -187,8 +192,7 @@ class OptionsFlow(config_entries.OptionsFlow):
         """Return a schema for OpenAI completion options."""
         if not options:
             options = DEFAULT_OPTIONS
-
-        return {
+        schema = {
             vol.Optional(
                 CONF_PROMPT,
                 description={"suggested_value": options[CONF_PROMPT]},
@@ -259,4 +263,20 @@ class OptionsFlow(config_entries.OptionsFlow):
                     mode=SelectSelectorMode.DROPDOWN,
                 )
             ),
+            vol.Optional(
+                CONF_USE_ZEP_MEMORY,
+                description={"suggested_value": options.get(CONF_USE_ZEP_MEMORY, DEFAULT_USE_ZEP_MEMORY)},
+                default=DEFAULT_USE_ZEP_MEMORY,
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_ZEP_API_KEY,
+                description={"suggested_value": options.get(CONF_ZEP_API_KEY)},
+            ): str,
+            vol.Optional(
+                CONF_ZEP_SESSION_TTL,
+                description={"suggested_value": options.get(CONF_ZEP_SESSION_TTL, DEFAULT_ZEP_SESSION_TTL)},
+                default=DEFAULT_ZEP_SESSION_TTL,
+            ): int
         }
+
+        return schema

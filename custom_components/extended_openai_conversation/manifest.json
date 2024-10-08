@@ -19,7 +19,8 @@
   "issue_tracker": "https://github.com/gruberdev/extended-hass-llm/issues",
   "requirements": [
     "openai",
-    "zep-cloud"
+    "zep-cloud",
+    "zep-python"
   ],
-  "version": "0.0.2"
+  "version": "0.0.3"
 }

@@ -1,0 +1,3 @@
+pylint
+pyproject.toml
+__pycache__
